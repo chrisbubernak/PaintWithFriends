@@ -1,9 +1,11 @@
 <html>
 <head>
-	<script src="http://107.2.242.213:1337/socket.io/socket.io.js"></script>
+	<script src="http://172.27.35.105:1337/socket.io/socket.io.js"></script>
+	<!--<script src="http://107.2.242.213:1337/socket.io/socket.io.js"></script>-->
 	<script language="javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js" type="text/javascript"></script>
 	<script>
-		var socket = io.connect('http://107.2.242.213:1337');
+		var socket = io.connect('http://172.27.35.105:1337');
+		//var socket = io.connect('http://107.2.242.213:1337');
 			socket.on('new player', function (data) {
 			document.getElementById("count").innerHTML = 'A player joined, total number: ' + data.clients;
 			console.log('A player joined, total number: ' + data.clients);
@@ -17,13 +19,15 @@
 		
 		//when the server pushes x y coordinates to us go draw them
 		socket.on('pushUpdateToClients', function(data) {
-			draw(data.x, data.y);
+			for (var b in data.buffer) {
+				draw(data.buffer[b].x, data.buffer[b].y);
+			}
 		});
 
 	</script>
 		
 	<script>
-		var CANVAS_WIDTH = 500;
+		var CANVAS_WIDTH = 750;
 		var CANVAS_HEIGHT = 500;
 		var canvasElement = $("<canvas id='canvas' style='border:solid 1px #000000' width='" + CANVAS_WIDTH + "'height='" + CANVAS_HEIGHT + "'></canvas>");
 		var canvas = canvasElement.get(0).getContext("2d");
@@ -39,14 +43,15 @@
 		});
 	
 		var isDown = false;
+		//buffer to store coordinates you've drawn before pushing to server
+		var myBuffer = [];
   
 		function doMouseMove (event) {
 			var mousePos = getMousePos(c, event);
 			if (isDown) {
 				draw(mousePos.x, mousePos.y);
-				socket.emit('pushUpdateToServer', {x :mousePos.x, y:mousePos.y});
+				myBuffer.push({x :mousePos.x, y:mousePos.y});
 			}
-			console.log("Pos: " + mousePos.x + ", " + mousePos.y);
 		}  
   
 		function getMousePos(canvas, event) {
@@ -69,11 +74,18 @@
 		}
   
 		function doMouseDown(event) {
+			//to be able to draw a single point (without mousemove)
+			//we need this code
+			var mousePos = getMousePos(c, event);
+			draw(mousePos.x, mousePos.y);
+			myBuffer.push({x :mousePos.x, y:mousePos.y});
 			isDown = true;
 		}
 		
 		function doMouseUp(event) {
-			isDown = false;
+			isDown = false
+			socket.emit('pushUpdateToServer', {buffer:myBuffer});
+			myBuffer = [];
 		}
 	</script>
 </head>
