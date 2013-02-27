@@ -7,20 +7,30 @@
 		var socket = io.connect('http://172.27.35.105:1337');
 		//var socket = io.connect('http://107.2.242.213:1337');
 			socket.on('new player', function (data) {
-			document.getElementById("count").innerHTML = 'A player joined, total number: ' + data.clients;
-			console.log('A player joined, total number: ' + data.clients);
+			updateNumOfPeople(data.clients);
+			//document.getElementById("count").innerHTML = 'A player joined, total number: ' + data.clients;
+			//console.log('A player joined, total number: ' + data.clients);
 		});
 		
 		//when a player leaves...
 		socket.on('player left', function (data) {
-			document.getElementById("count").innerHTML = 'A player left, total number: ' + data.clients;
-			console.log('A player left, total number: ' + data.clients);
+			updateNumOfPeople(data.clients);
+			//document.getElementById("count").innerHTML = 'A player left, total number: ' + data.clients;
+			//console.log('A player left, total number: ' + data.clients);
 		});
 		
 		//when the server pushes x y coordinates to us go draw them
 		socket.on('pushUpdateToClients', function(data) {
 			for (var b in data.buffer) {
-				draw(data.buffer[b].x, data.buffer[b].y);
+				draw(data.buffer[b].x, data.buffer[b].y, data.color);
+			}
+		});
+		
+		//when a client connects a server needs to push it all the previous data...this is stored slightly 
+		//differently than the othe data we recieve cuz data could be many different colors
+		socket.on('pushUpdateToClient', function(data) {
+			for (var p in data.points) {
+				draw(data.points[p].x, data.points[p].y, data.points[p].color);
 			}
 		});
 
@@ -29,18 +39,87 @@
 	<script>
 		var CANVAS_WIDTH = 750;
 		var CANVAS_HEIGHT = 500;
+		var MENU_HEIGHT = 75;
+		var PAINT_RADIUS = 5;
+		var PADDING = 10;
+		var BUTTON_WIDTH = 10;
+		
+		var color = "green";
+		var colors = ["black", "gray", "green", "yellow", "white", "red", "blue", "orange", "purple", "brown"];
+		var colorButtons = [];
+		
 		var canvasElement = $("<canvas id='canvas' style='border:solid 1px #000000' width='" + CANVAS_WIDTH + "'height='" + CANVAS_HEIGHT + "'></canvas>");
 		var canvas = canvasElement.get(0).getContext("2d");
 		var c;
 		
 		//when the page loads append our canvas and set up listeners
 		$(document).ready(function () {
-			$("#canvas").append(canvasElement);
+			$("#canvasDiv").append(canvasElement);
 			c = document.getElementById("canvas");
+			//set up listeners
 			c.addEventListener("mousedown", doMouseDown, false);
 			c.addEventListener("mouseup", doMouseUp, false);
 			c.addEventListener("mousemove", doMouseMove, false);
+			//draw menu
+			drawMenu();
 		});
+		
+		function drawMenu() {
+			//draw seperator
+			canvas.beginPath();
+			canvas.moveTo(0,CANVAS_HEIGHT - MENU_HEIGHT);
+			canvas.lineTo(CANVAS_WIDTH,CANVAS_HEIGHT - MENU_HEIGHT);
+			canvas.strokeStyle = 'black';
+			canvas.stroke();
+
+			//draw current color box
+			canvas.beginPath();
+			canvas.rect(PADDING, CANVAS_HEIGHT - MENU_HEIGHT + PADDING, BUTTON_WIDTH*5, MENU_HEIGHT - 2*PADDING);
+			canvas.fillStyle = color;
+			canvas.fill();
+			canvas.strokeStyle = 'black';
+			canvas.stroke();
+			
+			//draw the other boxes
+			var offset = 0;
+			for (var i in colors) {
+				var cx, cy, cw, ch;
+				canvas.beginPath();
+				if (i%2==0) {
+					cx = BUTTON_WIDTH*5 + PADDING + PADDING*parseInt(offset)*2 + BUTTON_WIDTH*(parseInt(offset) + 1);
+					cy = CANVAS_HEIGHT - MENU_HEIGHT + PADDING;
+					cw = BUTTON_WIDTH*2;
+					ch = (MENU_HEIGHT - 3*PADDING)/2;
+					offset++;			
+				}
+				else {
+					cx = BUTTON_WIDTH*5 + PADDING + PADDING*parseInt(offset-1)*2 + BUTTON_WIDTH*(parseInt(offset-1) + 1);
+					cy = CANVAS_HEIGHT - MENU_HEIGHT + 2*PADDING + (MENU_HEIGHT - 3*PADDING)/2;
+					cw = BUTTON_WIDTH*2;
+					ch = (MENU_HEIGHT - 3*PADDING)/2;		
+				}
+				canvas.rect(cx, cy, cw, ch);
+				colorButtons.push({color: colors[i], x: cx, y: cy, w: cw, h: ch});
+				canvas.fillStyle = colors[i];
+				canvas.fill();
+				canvas.strokeStyle = 'black';
+				canvas.stroke();
+			}
+			
+		}
+		
+		function checkButtonClick(mousePos) {
+			for (b in colorButtons) {
+				var button = colorButtons[b];
+				if (mousePos.x >=  button.x && mousePos.x <= (button.x + button.w)
+					&& mousePos.y >= button.y && mousePos.y <= (button.y + button.h)) {
+						color = button.color;
+						//redraw the menu
+						drawMenu();
+						return;
+					}
+			}
+		}
 	
 		var isDown = false;
 		//buffer to store coordinates you've drawn before pushing to server
@@ -48,28 +127,42 @@
   
 		function doMouseMove (event) {
 			var mousePos = getMousePos(c, event);
-			if (isDown) {
-				draw(mousePos.x, mousePos.y);
+			if (isDown && inPaintZone(mousePos)) {
+				draw(mousePos.x, mousePos.y, color);
 				myBuffer.push({x :mousePos.x, y:mousePos.y});
 			}
 		}  
   
 		function getMousePos(canvas, event) {
 			var rect = canvas.getBoundingClientRect();
+			var x = event.clientX - rect.left;
+			var y = event.clientY - rect.top;
 			return {
-				x: event.clientX - rect.left,
-				y: event.clientY - rect.top
+				x: x,
+				y: y
 			};
 		}
 		
+		function inPaintZone(mousePos) {
+			if (mousePos.y > CANVAS_HEIGHT - MENU_HEIGHT - PAINT_RADIUS) {
+				return false;
+			}
+			return true;
+		}
 		
-		function draw(x, y) {
+		function updateNumOfPeople(number) {
+			canvas.font = '20pt Calibri';
+			canvas.fillStyle = 'black';
+			canvas.fillText(number + ' people painting!', 10, 25);
+		}
+		
+		function draw(x, y, drawColor) {
 			canvas.beginPath();
-			canvas.arc(x, y, 5, 0, 2 * Math.PI, false);
-			canvas.fillStyle = 'green';
+			canvas.arc(x, y, PAINT_RADIUS, 0, 2 * Math.PI, false);
+			canvas.fillStyle = drawColor;
 			canvas.fill();
 			canvas.lineWidth = 0;
-			canvas.strokeStyle = 'green';
+			canvas.strokeStyle = drawColor;
 			canvas.stroke();
 		}
   
@@ -77,14 +170,19 @@
 			//to be able to draw a single point (without mousemove)
 			//we need this code
 			var mousePos = getMousePos(c, event);
-			draw(mousePos.x, mousePos.y);
-			myBuffer.push({x :mousePos.x, y:mousePos.y});
+			if (inPaintZone(mousePos)) {
+				draw(mousePos.x, mousePos.y, color);
+				myBuffer.push({x :mousePos.x, y:mousePos.y});
+			}
+			else {
+				checkButtonClick(mousePos);
+			}
 			isDown = true;
 		}
 		
 		function doMouseUp(event) {
 			isDown = false
-			socket.emit('pushUpdateToServer', {buffer:myBuffer});
+			socket.emit('pushUpdateToServer', {buffer:myBuffer, color: color});
 			myBuffer = [];
 		}
 	</script>
@@ -94,7 +192,7 @@
 	<h1>Paint with Friends!</h1>
 	<div id="count">
 	</div>
-	<div id = "canvas">
+	<div id = "canvasDiv">
 	</div>
 </body>
 </html>
