@@ -1,0 +1,88 @@
+<html>
+<head>
+	<script src="http://107.2.242.213:1337/socket.io/socket.io.js"></script>
+	<script language="javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js" type="text/javascript"></script>
+
+<script>
+  var socket = io.connect('http://107.2.242.213:1337');
+  socket.on('new player', function (data) {
+      document.getElementById("count").innerHTML = 'A player joined, total number: ' + data.clients;
+    console.log('A player joined, total number: ' + data.clients);
+  });
+  socket.on('player left', function (data) {
+    document.getElementById("count").innerHTML = 'A player left, total number: ' + data.clients;
+    console.log('A player left, total number: ' + data.clients);
+  });
+  socket.on('pushUpdateToClients', function(data) {
+    draw(data.x, data.y);
+  });
+
+</script>
+		
+<script>
+  var CANVAS_WIDTH = 500;
+  var CANVAS_HEIGHT = 500;
+  var canvasElement = $("<canvas id='canvas' style='border:solid 1px #000000' width='" + CANVAS_WIDTH + "'height='" + CANVAS_HEIGHT + "'></canvas>");
+  var canvas = canvasElement.get(0).getContext("2d");
+  var c;
+    $(document).ready(function () {
+      $("#canvas").append(canvasElement);
+	    c = document.getElementById("canvas");
+	    c.addEventListener("mousedown", doMouseDown, false);
+	    c.addEventListener("mouseup", doMouseUp, false);
+		c.addEventListener("mousemove", doMouseMove, false);
+
+	});
+	
+  var isDown = false;
+  
+  function doMouseMove (event) {
+    var mousePos = getMousePos(c, event);
+	if (isDown) {
+		draw(mousePos.x, mousePos.y);
+		socket.emit('pushUpdateToServer', {x :mousePos.x, y:mousePos.y});
+	}
+	console.log("Pos: " + mousePos.x + ", " + mousePos.y);
+  }  
+  
+  function getMousePos(canvas, event) {
+    var rect = canvas.getBoundingClientRect();
+	return {
+	  x: event.clientX - rect.left,
+	  y: event.clientY - rect.top
+	};
+  }
+  function draw(x, y) {
+    canvas.beginPath();
+    canvas.arc(x, y, 5, 0, 2 * Math.PI, false);
+    canvas.fillStyle = 'green';
+    canvas.fill();
+    canvas.lineWidth = 0;
+    canvas.strokeStyle = 'green';
+    canvas.stroke();
+  }
+  
+  function doMouseDown(event) {
+    isDown = true;
+  }
+  function doMouseUp(event) {
+	isDown = false;
+  }
+	
+
+</script>
+	
+</head>
+
+
+
+<body>
+<h1>
+Paint with Friends!
+</h1>
+<div id="count">
+</div>
+<div id = "canvas">
+</div>
+</body>
+</html>
