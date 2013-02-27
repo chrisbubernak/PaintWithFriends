@@ -10,8 +10,7 @@ io.sockets.on('connection', function(client){
 
 
 function clientUpdate(data) {
-  console.log(data.x + " " + data.y);
-  io.sockets.emit('pushUpdateToClients', {x:data.x, y:data.y});
+  io.sockets.emit('pushUpdateToClients', {buffer:data.buffer});
 };
 
 function clientDisconnect(client){
