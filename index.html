@@ -19,18 +19,19 @@
 			drawMenu();
 		});
 		
-		//when the server pushes x y coordinates to us go draw them
+		//when the server pushes shapes to us go draw them
 		socket.on('pushUpdateToClients', function(data) {
-			for (var b in data.buffer) {
-				draw(data.buffer[b].x, data.buffer[b].y, data.color);
-			}
-		});
-		
-		//when a client connects a server needs to push it all the previous data...this is stored slightly 
-		//differently than the othe data we recieve cuz data could be many different colors
-		socket.on('pushUpdateToClient', function(data) {
-			for (var p in data.points) {
-				draw(data.points[p].x, data.points[p].y, data.points[p].color);
+			for (var s in data.shapes) {
+			    var shape = data.shapes[s];
+				for (var p in shape.points) {
+					var point = shape.points[p];
+					if (p == 0) {
+						drawLine(point.x, point.y, point.x, point.y, shape.color);
+					}
+					else {
+						drawLine(shape.points[p-1].x, shape.points[p-1].y, point.x, point.y, shape.color);					
+					}
+				}
 			}
 		});
 		
@@ -170,11 +171,18 @@
 		var isDown = false;
 		//buffer to store coordinates you've drawn before pushing to server
 		var myBuffer = [];
+		var oldX;
+		var oldY;
   
 		function doMouseMove (event) {
 			var mousePos = getMousePos(c, event);
 			if (isDown && inPaintZone(mousePos)) {
-				draw(mousePos.x, mousePos.y, color);
+			    if (myBuffer.length == 0) {
+					draw(mousePos.x, mousePos.y, color);
+				}
+				else {
+					drawLine(myBuffer[myBuffer.length-1].x, myBuffer[myBuffer.length-1].y, mousePos.x, mousePos.y, color);
+				}
 				myBuffer.push({x :mousePos.x, y:mousePos.y});
 			}
 		}  
@@ -190,7 +198,7 @@
 		}
 		
 		function inPaintZone(mousePos) {
-			if (mousePos.y > CANVAS_HEIGHT - MENU_HEIGHT - PAINT_RADIUS) {
+			if (mousePos.y > CANVAS_HEIGHT - MENU_HEIGHT - PAINT_RADIUS*2) {
 				return false;
 			}
 			return true;
@@ -205,7 +213,28 @@
 			canvas.strokeStyle = drawColor;
 			canvas.stroke();
 		}
-  
+
+		function drawLine(x1, y1, x2, y2, drawColor) {
+			var distance = Math.sqrt(Math.pow(Math.abs(x1-x2), 2) + Math.pow(Math.abs(y1-y2), 2));
+			var xd = x1-x2;
+			var yd = y1-y2;
+			var slope = yd/xd;
+			for (var i = 0; i <= Math.max(Math.abs(xd), Math.abs(yd))*2; i++) {
+				canvas.beginPath();
+				if (Math.abs(xd) > Math.abs(yd)) {
+					canvas.arc(x1+(i/2), y1+(i/2)*slope, PAINT_RADIUS, 0, 2 * Math.PI, false);
+				}
+				else {
+					canvas.arc(x1+(i/2)/slope, y1+(i/2), PAINT_RADIUS, 0, 2 * Math.PI, false);
+				}
+				canvas.fillStyle = drawColor;
+				canvas.fill();
+				canvas.lineWidth = 0;
+				canvas.strokeStyle = drawColor;
+				canvas.stroke();
+			}
+		}
+		
 		function doMouseDown(event) {
 			//to be able to draw a single point (without mousemove)
 			//we need this code
@@ -222,7 +251,7 @@
 		
 		function doMouseUp(event) {
 			isDown = false
-			socket.emit('pushUpdateToServer', {buffer:myBuffer, color: color});
+			socket.emit('pushUpdateToServer', {shape:{points: myBuffer, color: color}});
 			myBuffer = [];
 		}
 	</script>
