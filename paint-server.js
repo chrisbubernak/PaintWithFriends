@@ -1,33 +1,36 @@
 var io = require('socket.io').listen(1337, "0.0.0.0");
 
-//keep track of all the drawn points...
-var points = [];
+//keep track of all the drawn shapes...
+var shapes = [];
 
 var activeClients = 0;
 io.sockets.on('connection', function(client){
   activeClients +=1;
   io.sockets.emit('new player', {clients:activeClients})
   client.on('disconnect', function(){clientDisconnect(client)});
-  client.emit('pushUpdateToClient', {points:points}); 
+
+
+  //push all the shapes to a client
+  client.emit('pushUpdateToClients', {shapes:shapes}); 
   
   //when a client hits the clear button clear the points array
   //and then tell all the clients do clear their local whiteboards
   client.on('clear', function() {
-	points = []
+	shapes = []
         io.sockets.emit('clearClients');
   });
+
   //when a client sends us updates save them and push the info to all other clients
   client.on('pushUpdateToServer', function(data){
-	for (var b in data.buffer) {
-		points.push({color:data.color, x:data.buffer[b].x, y:data.buffer[b].y});
-	}
+	shapes.push(data.shape);
 	clientUpdate(data)
   });
 });
 
 
+//update all the clients with the new shape
 function clientUpdate(data) {
-  io.sockets.emit('pushUpdateToClients', {buffer:data.buffer, color: data.color});
+  io.sockets.emit('pushUpdateToClients', {shapes: [data.shape]});
 };
 
 function clientDisconnect(client){
