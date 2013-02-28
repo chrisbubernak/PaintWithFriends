@@ -26,7 +26,7 @@
 				for (var p in shape.points) {
 					var point = shape.points[p];
 					if (p == 0) {
-						drawLine(point.x, point.y, point.x, point.y, shape.color);
+						drawPoint(point.x, point.y, shape.color);
 					}
 					else {
 						drawLine(shape.points[p-1].x, shape.points[p-1].y, point.x, point.y, shape.color);					
@@ -171,8 +171,7 @@
 		var isDown = false;
 		//buffer to store coordinates you've drawn before pushing to server
 		var myBuffer = [];
-		var oldX;
-		var oldY;
+
   
 		function doMouseMove (event) {
 			var mousePos = getMousePos(c, event);
@@ -210,7 +209,7 @@
 			return true;
 		}
 		
-		function draw(x, y, drawColor) {
+		function drawPoint(x, y, drawColor) {
 			canvas.beginPath();
 			canvas.arc(x, y, PAINT_RADIUS, 0, 2 * Math.PI, false);
 			canvas.fillStyle = drawColor;
@@ -246,7 +245,7 @@
 			//we need this code
 			var mousePos = getMousePos(c, event);
 			if (inPaintZone(mousePos)) {
-				draw(mousePos.x, mousePos.y, color);
+				drawPoint(mousePos.x, mousePos.y, color);
 				myBuffer.push({x :mousePos.x, y:mousePos.y});
 			}
 			else {
