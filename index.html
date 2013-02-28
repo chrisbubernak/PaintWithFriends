@@ -4,19 +4,19 @@
 	<!--<script src="http://107.2.242.213:1337/socket.io/socket.io.js"></script>-->
 	<script language="javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js" type="text/javascript"></script>
 	<script>
+	    var numOfClients;
+		
 		var socket = io.connect('http://172.27.35.105:1337');
 		//var socket = io.connect('http://107.2.242.213:1337');
 			socket.on('new player', function (data) {
-			updateNumOfPeople(data.clients);
-			//document.getElementById("count").innerHTML = 'A player joined, total number: ' + data.clients;
-			//console.log('A player joined, total number: ' + data.clients);
+			numOfClients = data.clients;
+			drawMenu();
 		});
 		
 		//when a player leaves...
 		socket.on('player left', function (data) {
-			updateNumOfPeople(data.clients);
-			//document.getElementById("count").innerHTML = 'A player left, total number: ' + data.clients;
-			//console.log('A player left, total number: ' + data.clients);
+			numOfClients = data.clients;
+			drawMenu();
 		});
 		
 		//when the server pushes x y coordinates to us go draw them
@@ -33,20 +33,23 @@
 				draw(data.points[p].x, data.points[p].y, data.points[p].color);
 			}
 		});
-
-	</script>
 		
-	<script>
+	    //when the server tells all the clients to clear their whiteboard
+		socket.on('clearClients', function() {
+			canvas.clearRect (0, 0, CANVAS_WIDTH , CANVAS_HEIGHT - MENU_HEIGHT );		
+		});
+
 		var CANVAS_WIDTH = 750;
 		var CANVAS_HEIGHT = 500;
 		var MENU_HEIGHT = 75;
 		var PAINT_RADIUS = 5;
 		var PADDING = 10;
+		var TEXT_SIZE = 20;
 		var BUTTON_WIDTH = 10;
-		
 		var color = "green";
-		var colors = ["black", "gray", "green", "yellow", "white", "red", "blue", "orange", "purple", "brown"];
+		var colors = ["black", "gray", "green", "yellow", "white", "red", "blue", "orange", "purple", "brown", "pink", "indigo", "aqua", "teal", "lime", "maroon", "navy", "olive"];
 		var colorButtons = [];
+		var buttons = [];
 		
 		var canvasElement = $("<canvas id='canvas' style='border:solid 1px #000000' width='" + CANVAS_WIDTH + "'height='" + CANVAS_HEIGHT + "'></canvas>");
 		var canvas = canvasElement.get(0).getContext("2d");
@@ -65,6 +68,10 @@
 		});
 		
 		function drawMenu() {
+			//clear the previous menu
+			canvas.clearRect (0, CANVAS_HEIGHT-MENU_HEIGHT, CANVAS_WIDTH , MENU_HEIGHT );
+
+			
 			//draw seperator
 			canvas.beginPath();
 			canvas.moveTo(0,CANVAS_HEIGHT - MENU_HEIGHT);
@@ -106,6 +113,37 @@
 				canvas.stroke();
 			}
 			
+			//clear button
+			bx = BUTTON_WIDTH*5 + PADDING + PADDING*parseInt(offset)*2 + BUTTON_WIDTH*(parseInt(offset) + 1);
+			by = CANVAS_HEIGHT - MENU_HEIGHT + PADDING;
+			bw = BUTTON_WIDTH*5;
+			bh = MENU_HEIGHT - 2*PADDING;
+			canvas.rect(bx, by, bw, bh);
+		    buttons.push({function: function() {
+					socket.emit('clear');
+				}, x: bx, y: by, w: bw, h: bh});
+		    canvas.strokeStyle = 'black';
+		    canvas.stroke();
+			canvas.beginPath();
+			canvas.moveTo(bx, by);
+			canvas.lineTo(bx+bw, by+bh);
+			canvas.lineWidth = 2;
+			canvas.strokeStyle = 'black';
+			canvas.stroke();
+
+			canvas.beginPath();
+			canvas.moveTo(bx, by+bh);
+			canvas.lineTo(bx+bw, by);
+			canvas.strokeStyle = 'black';
+			canvas.stroke();
+			canvas.lineWidth = 1;
+			   
+			//the painter # counter
+			canvas.font = TEXT_SIZE + 'pt Calibri';
+			canvas.fillStyle = 'black';
+			var text = numOfClients + " painters(s)!";
+			canvas.fillText(text, CANVAS_WIDTH - PADDING - text.length*11,CANVAS_HEIGHT - MENU_HEIGHT + (MENU_HEIGHT)/2 );
+			
 		}
 		
 		function checkButtonClick(mousePos) {
@@ -116,6 +154,14 @@
 						color = button.color;
 						//redraw the menu
 						drawMenu();
+						return;
+					}
+			}
+			for (b in buttons) {
+				var button = buttons[b];
+				if (mousePos.x >=  button.x && mousePos.x <= (button.x + button.w)
+					&& mousePos.y >= button.y && mousePos.y <= (button.y + button.h)) {
+						button.function();
 						return;
 					}
 			}
@@ -148,12 +194,6 @@
 				return false;
 			}
 			return true;
-		}
-		
-		function updateNumOfPeople(number) {
-			canvas.font = '20pt Calibri';
-			canvas.fillStyle = 'black';
-			canvas.fillText(number + ' people painting!', 10, 25);
 		}
 		
 		function draw(x, y, drawColor) {
