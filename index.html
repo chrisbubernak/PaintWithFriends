@@ -198,7 +198,13 @@
 		}
 		
 		function inPaintZone(mousePos) {
-			if (mousePos.y > CANVAS_HEIGHT - MENU_HEIGHT - PAINT_RADIUS*2) {
+			if (mousePos.y > CANVAS_HEIGHT - MENU_HEIGHT - PAINT_RADIUS ||
+				mousePos.y - PAINT_RADIUS<=0 ||
+				mousePos.x > CANVAS_WIDTH - PAINT_RADIUS ||
+				mousePos.x - PAINT_RADIUS <= 0) {
+				//treat going out of the paint zone as a "mouse up" event
+				console.log('OUT OF PAINT ZONE');
+				doMouseUp();
 				return false;
 			}
 			return true;
@@ -219,13 +225,13 @@
 			var xd = x1-x2;
 			var yd = y1-y2;
 			var slope = yd/xd;
-			for (var i = 0; i <= Math.max(Math.abs(xd), Math.abs(yd))*2; i++) {
+			for (var i = 0; i < Math.max(Math.abs(xd), Math.abs(yd)); i++) {
 				canvas.beginPath();
 				if (Math.abs(xd) > Math.abs(yd)) {
-					canvas.arc(x1+(i/2), y1+(i/2)*slope, PAINT_RADIUS, 0, 2 * Math.PI, false);
+					canvas.arc(x1+i, y1+i*slope, PAINT_RADIUS, 0, 2 * Math.PI, false);
 				}
 				else {
-					canvas.arc(x1+(i/2)/slope, y1+(i/2), PAINT_RADIUS, 0, 2 * Math.PI, false);
+					canvas.arc(x1+i/slope, y1+i, PAINT_RADIUS, 0, 2 * Math.PI, false);
 				}
 				canvas.fillStyle = drawColor;
 				canvas.fill();
