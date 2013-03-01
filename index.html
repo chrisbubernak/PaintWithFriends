@@ -202,7 +202,6 @@
 				mousePos.x > CANVAS_WIDTH - PAINT_RADIUS ||
 				mousePos.x - PAINT_RADIUS <= 0) {
 				//treat going out of the paint zone as a "mouse up" event
-				console.log('OUT OF PAINT ZONE');
 				doMouseUp();
 				return false;
 			}
