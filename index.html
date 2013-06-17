@@ -1,27 +1,13 @@
 <html>
 <head>
-    <script>
-	//use this to fallback to local ip b/c for testing my 
-	//firewall doesn't like using external ip address
-	var ip = "107.2.242.213";
-	var local = "172.27.35.105";
-	</script>
-	
-    <script src="http://107.2.242.213:1337/socket.io/socket.io.js"></script>
+    <script src='http://24.18.132.214:1337/socket.io/socket.io.js'></script>
 	
 	<script language="javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js" type="text/javascript"></script>
 	
 	<script>
-		if(typeof io == 'undefined') {
-		  document.write(unescape("%3Cscript src='http://172.27.35.105:1337/socket.io/socket.io.js' type='text/javascript'%3E%3C/script%3E"));
-		  document.write(unescape("%3Cscript src='https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js' type='text/javascript'%3E%3C/script%3E"));
-		  ip = local;
-		}
-	</script>
-	<script>
 	    var numOfClients;
 		
-		var socket = io.connect('http://'+ip+':1337');
+		var socket = io.connect('http://24.18.132.214:1337');
 			socket.on('new player', function (data) {
 			numOfClients = data.clients;
 			drawMenu();
